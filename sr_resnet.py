@@ -42,8 +42,8 @@ def sr_resnet(img_data):
                     outR[outR>255.] = 255.
                     outR = outR.transpose(1,2,0)
 
-                    outL = cv2.resize(outL, (width*4, height*4))
-                    outR = cv2.resize(outR, (width*4, height*4))
+                    outL = cv2.resize(outL, (width, height))
+                    outR = cv2.resize(outR, (width, height))
 
                     person[i][0] = outL.astype(np.uint8)
                     person[i][1] = outR.astype(np.uint8)

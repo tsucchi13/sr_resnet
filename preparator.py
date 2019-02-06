@@ -23,7 +23,7 @@ class Preparator(object):
 
     """
 
-    def __init__(self, dir_list, resize_rate=2, load=None, save=None):
+    def __init__(self, dir_list, resize_rate=4, load=None, save=None):
         self.__img_data = []
         self.__label = []
         self.__df = None
@@ -54,6 +54,22 @@ class Preparator(object):
         if save:
             with open(save, "wb") as f:
                 pickle.dump([self.__img_data, self.__label], f)
+
+    def srres_save(self):
+        with open("dataset_sr_origin_8x4.pkl", "wb") as f:
+            pickle.dump([self.__img_data, self.__label], f)
+
+    def grayscale_save(self):
+        with open("dataset_gray.pkl", "wb") as f:
+            pickle.dump([self.__img_data, self.__label], f)
+
+    def clahe_save(self):
+        with open("dataset_clahe.pkl", "wb") as f:
+            pickle.dump([self.__img_data, self.__label], f)
+
+    def yoshida_save(self):
+        with open("dataset_yoshida.pkl", "wb") as f:
+            pickle.dump([self.__img_data, self.__label], f)
 
     def __clipping_eye(self, dir, img_file):
         img = imread(os.path.join(dir, img_file))
@@ -86,6 +102,8 @@ class Preparator(object):
                     int(eye_CL[0]-eye_WL*2):int(eye_CL[0]+eye_WL*2)]
             coord = self.__df.loc[img_file].values
             idx = np.where(np.all(self.__coords == coord, axis=1))[0]
+            img_L = cv2.resize(img_L,(36,18))
+            img_R = cv2.resize(img_R,(36,18))
             self.__img_data[-1].append([img_L, img_R])
             self.__label[-1].append(idx)
 
@@ -97,15 +115,16 @@ class Preparator(object):
                 index_col = 0
                 )
         coords = self.__getFixedCoords(df)
+        print(coords)
         self.__coords = coords
         self.__df = df[df["x"].isin(coords[:,0]) & df["y"].isin(coords[:,1])]
 
     def __getFixedCoords(self, df):
         # 読み込んだ座標一覧から固定点（例：3x3の点）の一覧を取得
         x = Counter(df["x"].values).most_common()
-        x = [n[0] for n in x if n[1] > 20]
+        x = [n[0] for n in x if n[1] > 200]
         y = Counter(df["y"].values).most_common()
-        y = [n[0] for n in y if n[1] > 20]
+        y = [n[0] for n in y if n[1] > 200]
         x.sort()
         y.sort()
         return np.array([[m, n] for n, m in product(y, x)])
@@ -128,8 +147,8 @@ class Preparator(object):
     def scale_down(self, size):
         for person in self.__img_data:
             for i,imgs in enumerate(person):
-                person[i][0] = cv2.resize(imgs[0], size)
-                person[i][1] = cv2.resize(imgs[1], size)
+                person[i][0] = cv2.resize(imgs[0], size, interpolation=cv2.INTER_AREA)
+                person[i][1] = cv2.resize(imgs[1], size, interpolation=cv2.INTER_AREA)
         print("The size of image is nows {}".format(person[i][0].shape))
 
     def srresize(self):
@@ -138,6 +157,7 @@ class Preparator(object):
         sr_resnet(self.__img_data)
         height, width = self.__img_data[0][0][0].shape[:2]
         print("\nthe size of a image is now {}".format((height, width)))
+        # self.scale_down((20,10))
         self.__resized =True
 
     def apply_clahe(self):
@@ -180,7 +200,7 @@ class Preparator(object):
                 break
         cv2.destroyAllWindows()
 
-    @property
+    @property #gettter
     def img_data(self):
         if not self.__aligned:
             self.resize(resize_rate=1)
