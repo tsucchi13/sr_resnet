@@ -5,7 +5,8 @@ import numpy as np
 from itertools import chain
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
-from sklearn.preprocessing import StandardScaler, MinMaxScaler
+from sklearn.preprocessing import StandardScaler, MinMaxScaler, RobustScaler
+import pickle
 
 class Preprocessor(object):
     def __init__(self, data, label, eyes = "both"):
@@ -28,15 +29,19 @@ class Preprocessor(object):
         self.__test_label = self.__label[test_idx]
         self.__test_label = np.array(self.__test_label).reshape(-1,1)
 
+
         if self.__eyes == "both":
             self.__train_data = [self.__data[i] for i in train_idx]
             test_data = self.__data[test_idx]
+            if n==0:
+                with open("test_data_0202_img_v2.pkl", "wb") as f:
+                    pickle.dump([test_data , self.__test_label], f)
             self.__train_data = list(chain.from_iterable(self.__train_data))
             self.__train_data = np.array(self.__train_data)
-            self.__train_data = self.__train_data.reshape(-1, self.__data_size*2)
+            self.__train_data = self.__train_data.reshape(-1, self.__data_size*2).astype(np.float64)
             self.__test_data = np.array(test_data).reshape(-1,
                             self.__data_size*2
-                            )
+                            ).astype(np.float64)
 
         elif self.__eyes == "left" or self.__eyes=="right":
             eye_idx = 0 if self.__eyes == "left" else 1
@@ -44,13 +49,14 @@ class Preprocessor(object):
             test_data = self.__data[test_idx]
             self.__train_data = list(chain.from_iterable(self.__train_data))
             self.__train_data = np.array(self.__train_data)[:,eye_idx]
-            self.__train_data = self.__train_data.reshape(-1, self.__data_size)
+            self.__train_data = self.__train_data.reshape(-1, self.__data_size).astype(np.float64)
             self.__test_data = np.array(test_data)[:,eye_idx].reshape(-1,
                             self.__data_size
-                            )
+                            ).astype(np.float64)
 
+        self.minmax_scaler() if mms else None
         self.strandard_scaler() if stds else None
-        self.minmaxscaler() if mms else None
+
 
     def strandard_scaler(self):
         scaler = StandardScaler()
@@ -63,6 +69,9 @@ class Preprocessor(object):
         scaler.fit(self.__train_data)
         self.__train_data = scaler.transform(self.__train_data)
         self.__test_data = scaler.transform(self.__test_data)
+        # self.__train_data = self.__train_data/255
+        # self.__test_data = self.__test_data/255
+
 
     @property
     def users(self):
